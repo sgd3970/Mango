@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="goodsMapper">
+	<resultMap type="GoodsVO" id="goodsList">
+		<result property="goodsId" column="goods_id" />
+		<result property="goodsCategory" column="goods_category" />
+		<result property="goodsName" column="goods_name" />
+		<result property="sellerName" column="seller_name" />
+		<result property="goodsState" column="goods_state" />
+		<result property="goodsDetail" column="goods_detail" />
+		<result property="goodsPrice" column="goods_price" />		
+		<result property="deliveryPrice" column="delivery_price" />		
+		<result property="regDate" column="regdate" />
+		<result property="gno" column="gno" />
+		<result property="id" column="id" />
+	</resultMap>
+
+	<select id="selectCatList" resultMap="goodsList" parameterType="GoodsVO">
+	   SELECT * FROM goods g left outer join goodsfile f 
+	   ON g.goods_id = f.goods_id
+	   WHERE 1=1
+	   AND g.goods_state = '승인'
+	   <if test="goodsCategory != null">
+	      AND g.goods_category = #{goodsCategory}
+	   </if>
+	   <if test="keyword != null and keyword != '' ">
+          AND g.goods_name like CONCAT('%',#{keyword},'%')
+       </if>
+       group by g.goods_id
+	   ORDER BY g.regdate DESC
+	   
+	   LIMIT #{skip}, #{amount}
+	</select>
+	
+	<select id="selectOneGoods" resultMap="goodsList" parameterType="GoodsVO">
+		SELECT A.*, B.realpath
+		FROM goods A
+		LEFT OUTER JOIN goodsfile B on A.goods_id = B.goods_id
+		GROUP BY A.goods_id
+		
+		LIMIT #{skip}, #{amount}
+	</select>
+
+	<select id="selectAllGoodsCount" resultType="Integer" parameterType="GoodsVO">
+		SELECT COUNT(*) FROM goods
+		WHERE 1=1
+		<if test="goodsCategory != null">
+			AND goods_category = #{goodsCategory}
+		</if>
+		<if test="keyword != null and keyword != '' ">
+			AND goods_name like CONCAT('%',#{keyword},'%')
+		</if>
+		AND goods_state = '승인'
+	</select>
+
+	<select id="selectGoodsDetailList" resultMap="goodsList" parameterType="GoodsVO">
+		SELECT * FROM goods
+		WHERE goods_id = #{goodsId}
+	</select>
+
+	<insert id="insertGoods" parameterType="GoodsVO">
+		INSERT INTO goods
+		(goods_id, goods_category, goods_name, seller_name,	goods_detail, goods_price, delivery_price,	regdate, id)
+		VALUES (#{goodsId}, #{goodsCategory}, #{goodsName}, #{sellerName}, #{goodsDetail}, #{goodsPrice}, #{deliveryPrice}, SYSDATE(6), #{id})
+	</insert>
+
+	<!-- seller별 goodsList 출력 -->
+	<select id="selectSellerGoodsList" resultMap="goodsList" parameterType="GoodsVO">
+		SELECT * FROM goods
+		WHERE id = #{id} ORDER BY regdate DESC
+		
+		LIMIT #{skip}, #{amount}
+	</select>
+
+	<!-- seller goods count -->
+	<select id="selectSellerGoodsCount" resultType="Integer" parameterType="GoodsVO">
+		SELECT COUNT(*) FROM goods
+		WHERE id = #{id}
+	</select>
+
+	<!-- 상품 삭제 -->
+	<delete id="deleteGoods" parameterType="GoodsVO">
+		DELETE FROM goods
+		WHERE goods_id = #{goodsId}
+	</delete>
+
+	<!-- 상품 수정 -->
+	<update id="modifyGoods" parameterType="GoodsVO">
+		UPDATE goods SET
+		goods_category=#{goodsCategory},goods_name=#{goodsName},goods_detail=#{goodsDetail},goods_price=#{goodsPrice},delivery_price=#{deliveryPrice}
+		WHERE goods_id = #{goodsId}
+	</update>
+	
+	
+	<!-- 관리자 섹션 -->
+	<select id="selectAdminAllList" resultMap="goodsList" parameterType="GoodsVO">
+		SELECT A.*, B.realpath
+		FROM goods A LEFT OUTER JOIN goodsfile B 
+		ON A.goods_id = B.goods_id
+		GROUP BY A.goods_id
+		ORDER BY A.regdate DESC
+		
+		LIMIT 8
+	</select>
+	
+	<select id="selectNotApprovedList" resultMap="goodsList" parameterType="GoodsVO">
+	   SELECT *, group_concat(B.realpath) as imageMulti FROM goods A left outer join goodsfile B 
+	   ON A.goods_id = B.goods_id
+	   WHERE 1=1
+	   AND A.goods_state = '승인대기'
+	   GROUP by A.goods_id
+	   	 
+	   ORDER BY A.regdate DESC
+	   
+	   LIMIT #{skip}, #{amount}
+	</select>
+	
+	<select id="selectNotApprovedCount" resultType="Integer" parameterType="GoodsVO">
+		SELECT COUNT(*) FROM goods
+		WHERE 1=1
+		AND goods_state = '승인대기'		
+	</select>
+	
+	<!-- 승인 -->
+	<update id="updateApproved" parameterType="GoodsVO">
+		UPDATE goods SET
+		goods_state = '승인'
+		WHERE goods_id = #{goodsId}
+	</update>
+	
+	<!-- 관리자 상품 수정 -->
+	<update id="adminModifyGoods" parameterType="GoodsVO">
+		UPDATE goods SET
+		goods_category=#{goodsCategory},goods_state=#{goodsState},goods_name=#{goodsName},goods_detail=#{goodsDetail},goods_price=#{goodsPrice},delivery_price=#{deliveryPrice}
+		WHERE goods_id = #{goodsId}
+	</update>	
+
+</mapper>
